@@ -9,6 +9,7 @@ from langchain_core.messages import (
     HumanMessage, 
 )
 from langgraph.graph.state import CompiledStateGraph
+from langchain_openai import ChatOpenAI
 
 
 Base = declarative_base()
@@ -60,14 +61,21 @@ def chat_interface(agent:CompiledStateGraph, ticket_id:str):
         messages = [HumanMessage(content=user_input)]
         if is_first_iteration:
             messages.append(HumanMessage(content=user_input))
+
         trigger = {
-            "messages": messages
+            "messages": messages,
+            "user_input": user_input,
         }
+
+        llm = ChatOpenAI(model="gpt-4o-mini")
+
         config = {
             "configurable": {
                 "thread_id": ticket_id,
+                "llm": llm,
             }
         }
+
         
         result = agent.invoke(input=trigger, config=config)
         print("Assistant:", result["messages"][-1].content)
