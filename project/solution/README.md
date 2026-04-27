@@ -164,9 +164,4 @@ Python 3.10
  No references to starter/ at runtime
  No .env file submitted
  No large database files committed
- All artifacts contained in solution/
-
-
-# License
-This project is provided for educational purposes as part of the Udacity Agentic AI program.
-See ../LICENSE.md for details.
+ All artifacts contained in solution
