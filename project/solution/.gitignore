@@ -1,0 +1,20 @@
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+
+# Logs
+logs/
+*.log
+
