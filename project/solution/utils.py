@@ -78,5 +78,6 @@ def chat_interface(agent:CompiledStateGraph, ticket_id:str):
 
         
         result = agent.invoke(input=trigger, config=config)
-        print("Assistant:", result["messages"][-1].content)
+        # print("Assistant:", result["messages"][-1].content)
+        print("Assistant:", result.get("final_answer", "No response generated."))
         is_first_iteration = False
