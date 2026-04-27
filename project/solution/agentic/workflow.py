@@ -1,6 +1,6 @@
-
-from typing import TypedDict, Annotated, List
+from typing import TypedDict, Annotated, List, Dict, Any, Optional
 import operator
+
 
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
@@ -13,13 +13,21 @@ from agentic.agents.memory_agent import memory_agent
 
 
 class AgentState(TypedDict):
+
     user_input: str
-    intent: str
-    retrieved_context: dict
-    final_answer: str
-    conversation_summary: str
+    intent: Optional[str]
+    retrieved_kb: Optional[Dict[str, Any]]
+    account_info: Optional[Dict[str, Any]]
+
+    final_answer: Optional[str]
+    confidence: Optional[float]
+    escalated: Optional[bool]
+    escalation_reason: Optional[str]
+
+    tools_used: Annotated[List[str], operator.add]
     next_step: str
     actions_taken: Annotated[List[str], operator.add]
+
 
 
 def route(state: AgentState) -> str:
