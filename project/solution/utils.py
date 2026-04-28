@@ -65,7 +65,7 @@ def chat_interface(agent: CompiledStateGraph, ticket_id: str):
     # ---- DEFAULT METADATA (adjust for demos) ----
     # You can change these values between runs to show different routing behavior
     DEFAULT_TICKET_METADATA = {
-        "urgency": "low",        # low | medium | high
+        "urgency": "high",        # low | medium | high
         "complexity": "low",     # low | medium | high
         "status": "open",
         "issue_type": "general"  # general | account | billing | technical
