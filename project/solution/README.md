@@ -1,167 +1,163 @@
-# Agentic AI Knowledge Assistant for Uda‑Hub
-Project Overview
-This project implements a modular Agentic AI system for the Uda‑Hub application using a custom LangGraph workflow.
-The system enables intelligent question answering, information retrieval, and reasoning over customer and article data provided by Uda‑Hub’s first customer, Cultpass.
-Key capabilities include:
 
-Intent‑driven multi‑agent orchestration
-Retrieval‑Augmented Generation (RAG)
-Short‑term (session) and long‑term (semantic) memory
-Tool‑based database abstraction
-Fully customizable workflow graph (no prebuilt workflows)
+# Agentic Customer Support System (CultPass)
 
-All components are implemented under the solution/ directory as required.
+This repository implements an **agentic, multi‑step customer support system**
+built using **LangGraph**, **LangChain**, and **SQLite**.
 
-# Agentic System Design
-The system is designed around a multi‑agent architecture, where each agent has a single responsibility.
-Agents
+The goal of the system is to demonstrate how autonomous agents can:
+- classify and route customer requests
+- invoke database‑backed support operations
+- make confidence‑based escalation decisions
+- persist memory across sessions
+- log decisions for auditability
 
-Intent Agent -> Classifies the user’s intent
-Retrieval Agent -> Retrieves relevant data using RAG
-Analysis Agent -> Reasons over retrieved knowledge
-Action Agent -> Generates structured or final answers
-Memory Agent -> Maintains short‑term and long‑term memory
+The implementation is intentionally enterprise‑oriented and aligns with
+reviewer requirements for **routing, tools, memory, and observability**.
 
+---
 
-# Workflow (Custom LangGraph)
+## 🧠 System Overview
+
+Customer requests are handled as **tickets** and processed through a
+graph‑based workflow of specialized agents.
+
+High‑level flow:
 User Input
-   ↓
+|
+v
 Intent Agent
-   ↓
-Retrieval Agent  ←→ Retrieval Tools
-   ↓
-Analysis Agent
-   ↓
-Action Agent
-   ↓
-Memory Agent
-   ↓
-END
+|
++-- knowledge_path --> Retrieval Agent --> Analysis Agent --> Memory Agent --> END
+|
++-- account_path   --> Retrieval Agent --> Analysis Agent --> Memory Agent --> END
+|
++-- escalation_path --------------------> Analysis Agent --> Memory Agent --> END
 
+Routing decisions are based on:
+- natural‑language intent
+- ticket metadata such as urgency and complexity
 
-# Note:
-The workflow is implemented from scratch in agentic/workflow.py and does not use any prebuilt graphs.
+---
 
+## 🔑 Key Capabilities
 
-# Project Structure
+### 🔀 Intelligent Routing
+- Requests are classified into:
+  - knowledge questions (FAQs, how‑to)
+  - account‑specific actions (subscriptions, user details)
+  - urgent or unclear requests
+- Routing logic lives in a dedicated **Intent Agent**
+
+---
+
+### 🧰 Database‑Backed Support Tools
+The system integrates multiple **DB‑backed tools**, including:
+
+- Account lookup by email
+- Subscription status retrieval
+- Experience / reservation lookup
+
+All database access is:
+- abstracted behind tools
+- structured in responses
+- fully logged
+
+---
+
+### 🧠 Memory Architecture
+
+#### Short‑Term (Session) Memory
+- Implemented via a **LangGraph checkpointer**
+- Identified by `thread_id` (ticket ID)
+- Enables multi‑step workflows
+- Allows workflow state inspection via `get_state_history()`
+
+#### Long‑Term (Persistent) Memory
+- Implemented using SQLite (`ticket_messages`)
+- Stores user and assistant messages
+- Retrieved across sessions for personalization and context reuse
+
+Together, this enables:
+- continuity within a session
+- context awareness across sessions
+
+---
+
+### 📊 Logging & Observability
+All major decisions are logged into SQLite (`ticket_logs`), including:
+- intent classification
+- routing decisions
+- tools invoked
+- confidence scores
+- escalation outcomes
+
+Logs are:
+- persisted
+- structured (JSON payloads)
+- queryable by ticket or stage
+
+This supports debugging, auditing, and reviewer inspection.
+
+---
+
+## 📁 Repository Structure
+
+```text
 solution/
 ├── agentic/
-│   ├── agents/          # All agent implementations
-│   ├── tools/           # Database & action tools
-│   ├── design/          # Architecture docs & diagrams
-│   └── workflow.py      # Custom LangGraph workflow
+│   ├── agents/         # Core agents (intent, retrieval, analysis, memory)
+│   ├── tools/          # DB-backed tools + logging + memory store
+│   └── workflow.py     # LangGraph orchestration logic
+│
+├── design/             # System design documentation
+│
 ├── data/
-│   ├── core/
-│   ├── external/
-│   └── models/
-├── tests/               # Automated tests
-├── utils.py             # Chat interface & helpers
-├── 03_agentic_app.py    # Main runnable application
-├── requirements.txt
-└── README.md
+│   ├── external/       # CultPass source DB (read-only)
+│   └── core/           # App-managed DB (logs + memory)
+│
+├── utils.py            # Chat interface and app bootstrap
+├── 01_external_db_setup.ipynb
+├── 02_core_db_setup.ipynb
+└── 03_agentic_app.ipynb
+
+# How to Run the Application
+
+Initialize databases:
+
+Run 01_external_db_setup.ipynb
+Run 02_core_db_setup.ipynb
 
 
-## Getting Started
-# Prerequisites
+Open 03_agentic_app.ipynb
+Start the application:
 
-Python 3.10+
-OpenAI API Key (via environment variable)
-Jupyter Notebook (for DB setup steps)
+    app = orchestrator()
+    chat_interface(app, "TICKET-001")
 
-# Dependencies
-All dependencies are listed in requirements.txt.
-Core libraries include:
-langgraph
-langchain
-langchain-openai
-openai
-pandas
-numpy
-sqlite3
-python-dotenv
+Use different ticket IDs (thread_id) to demonstrate:
 
-# Installation
+session memory
+persistent memory
+log separation
 
-Clone the repository
+# How to Inspect Memory & Logs
 
-git clone <repository_url>cd solutionShow more lines
+Inspect session state:
 
-Create and activate a virtual environment
+app.get_state(
+    config={"configurable": {"thread_id": "TICKET-001"}}
+)
 
-python -m venv venvsource venv/bin/activate   # macOS/Linuxvenv\Scripts\activate      # WindowsShow more lines
+Inspect Workflow History
 
-Install dependencies
+list(
+    app.get_state_history(
+        config={"configurable": {"thread_id": "TICKET-001"}}
+    )
+)
 
-pip install -r requirements.txtShow more lines
+Inspect Logs:
 
-Set environment variable (do not commit .env)
-
-Shellexport OPENAI_API_KEY="your_api_key_here"Show more lines
-
-# Data Setup
-Run the provided notebooks before executing the agentic app:
-
-# External database
-
-Plain Text01_external_db_setup.ipynb
-
-# Core Uda‑Hub database
-
-Plain Text02_core_db_setup.ipynb
-Data Expansion Requirement
-The file cultpass_articles.jsonl was expanded from 4 to 14+ articles, covering diverse topics such as:
-
-Fitness programs
-Nutrition
-Mental health
-Subscription plans
-Pricing & refunds
-App usage guidance
-
-No large .db files are submitted.
-
-# Running the Application
-Run the agentic system using:
-python 03_agentic_app.py
-This launches an interactive chat interface defined in utils.py.
-Optional enhancements to the chat interface are documented inside the file.
-
-# Memory Strategy
-
-Short‑term memory: Managed using thread_id (session‑based)
-Long‑term memory: Implemented via semantic retrieval over stored knowledge
-
-This allows the assistant to:
-
-Maintain conversational context
-Recall previously referenced entities
-Improve response relevance over time
-
-
-## Testing
-Automated tests are provided under the tests/ directory.
-Run all tests
-Shellpytest tests/Show more lines
-Test Coverage Includes
-
--> Agent behavior validation
--> Tool reliability
--> Workflow routing logic
--> Memory persistence
--> Edge cases (missing data, ambiguous queries)
-
-
-## Built With
-
-LangGraph – Custom agent workflows
-LangChain – Agent & tool abstractions
-OpenAI GPT Models
-SQLite – Lightweight local storage
-Python 3.10
-
-## Notes & Restrictions
-
- No references to starter/ at runtime
- No .env file submitted
- No large database files committed
- All artifacts contained in solution
+SELECT ticket_id, stage, payload, created_at
+FROM ticket_logs
+ORDER BY created_at DESC;

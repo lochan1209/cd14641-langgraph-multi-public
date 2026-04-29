@@ -1,46 +1,147 @@
 
-# Tools
+# Support & Infrastructure Tools
 
-This folder contains **tool implementations** used by agents to abstract external operations such as data retrieval.
+This directory contains all **supporting tools** used by the agentic workflow.
+These tools encapsulate **external data access**, **persistent memory**, and
+**observability/logging**, allowing agents to focus purely on decision logic.
 
-Tools provide a controlled interface between agents and data sources.
-
----
-
-## Why Tools Exist
-- Keep agents lightweight and focused on reasoning
-- Abstract implementation details (files, DBs, APIs)
-- Enable safe extension without changing agent logic
+All tools return **structured outputs** and are safely integrated into the
+LangGraph workflow.
 
 ---
 
-## Available Tools
+## 🧰 Tool Categories
 
-### Retrieval Tool
-**File:** `retrieval_tool.py`
-
-**Purpose:**
-- Simulate retrieval‑augmented generation (RAG)
-- Fetch relevant context based on user queries
-- Provide structured results to the Retrieval Agent
-
-**Behavior:**
-- Accepts a query string
-- Returns a dictionary containing relevant content
-- Can be extended to use embedding or vector search
+| Category | Tools |
+|--------|------|
+| Knowledge Retrieval | `retrieval_tool.py` |
+| Account / Subscription | `account_lookup_tool.py`, `subscription_tool.py` |
+| Memory Persistence | `memory_store.py` |
+| Logging / Audit | `logger.py` |
 
 ---
 
-## Design Considerations
-- Tools do not manage workflow state
-- Tools are stateless and reusable
-- Tools are injected at runtime via LangGraph config
+## 📚 `retrieval_tool.py`
+
+### Purpose
+- Retrieves relevant help and FAQ articles
+- Acts as the system’s knowledge base interface
+
+### Usage Context
+- Used by the **Retrieval Agent**
+- Supports knowledge‑based customer questions
+
+### Output Structure
+- Ranked articles with:
+  - title
+  - snippet / content
+  - relevance score
+
+Design principle:
+> Knowledge retrieval is isolated from reasoning logic to avoid agent hallucination.
 
 ---
 
-## Future Enhancements
-- Semantic vector search
-- Database query tools
-- External API integrations
+## 👤 `account_lookup_tool.py`
 
-These are intentionally out of scope for this project.
+### Purpose
+- Looks up user records by email
+- Retrieves linked subscription details
+
+### Backing Store
+- SQLite database: `data/external/cultpass.db`
+
+### Usage Context
+- Invoked for account‑specific requests only
+- Handles input normalization and safe failures
+
+### Output Structure
+- `found`: boolean
+- `user`: structured user record (if found)
+- `subscription`: structured subscription record (if found)
+- `error`: descriptive error message (if not found)
+
+Design principle:
+> Account actions are treated as sensitive operations and fail safely with escalation.
+
+---
+
+## 💳 `subscription_tool.py`
+
+### Purpose
+- Retrieves detailed subscription status
+- Supplements account lookup with structured plan details
+
+### Usage Context
+- Optional secondary lookup for account workflows
+- Supports richer, more accurate responses
+
+---
+
+## 💾 `memory_store.py`
+
+### Purpose
+- Implements **long‑term persistent memory**
+- Stores and retrieves conversation history across sessions
+
+### Backing Store
+- SQLite database: `data/core/udahub.db`
+- Table: `ticket_messages`
+
+### Stored Fields
+- `message_id` (generated UUID)
+- `ticket_id`
+- `role` (user / assistant)
+- `content`
+- `created_at`
+
+### Usage Context
+- Used by **Analysis Agent**
+- Provides historical context (`PRIOR_HISTORY`) for personalized responses
+
+Design principle:
+> Persistent memory enables continuity across sessions, not just within a single workflow.
+
+---
+
+## 📊 `logger.py`
+
+### Purpose
+- Centralized structured logging for all agent decisions
+- Enables observability, auditing, and debugging
+
+### Backing Store
+- SQLite database: `data/core/udahub.db`
+- Table: `ticket_logs`
+
+### Logged Events Include
+- intent classification
+- routing decisions
+- tools invoked
+- confidence scores
+- escalation outcomes
+- error conditions
+
+### Output Format
+- JSON payloads per log entry
+- Searchable by `ticket_id` and `stage`
+
+Design principle:
+> All significant decisions must be auditable and queryable after execution.
+
+---
+
+## ✅ Tool Design Guarantees
+
+- No agent directly accesses databases
+- All data access is abstracted via tools
+- Tools return structured, predictable outputs
+- Errors are explicit and non‑fatal
+- All tool usage is logged
+
+---
+
+## 🔍 Example: Testing Tool Integration
+
+```python
+Check subscription details for cathy.bloom@florals.org

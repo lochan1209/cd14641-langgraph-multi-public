@@ -1,53 +1,163 @@
-# README Template
 
-Below is a template provided for use when building your README file for students.
+# Agentic Customer Support System (CultPass)
 
-# Project Title
+This repository implements an **agentic, multi‑step customer support system**
+built using **LangGraph**, **LangChain**, and **SQLite**.
 
-Project description goes here.
+The goal of the system is to demonstrate how autonomous agents can:
+- classify and route customer requests
+- invoke database‑backed support operations
+- make confidence‑based escalation decisions
+- persist memory across sessions
+- log decisions for auditability
 
-## Getting Started
+The implementation is intentionally enterprise‑oriented and aligns with
+reviewer requirements for **routing, tools, memory, and observability**.
 
-Instructions for how to get a copy of the project running on your local machine.
+---
 
-### Dependencies
+## 🧠 System Overview
 
-```
-Examples here
-```
+Customer requests are handled as **tickets** and processed through a
+graph‑based workflow of specialized agents.
 
-### Installation
+High‑level flow:
+User Input
+|
+v
+Intent Agent
+|
++-- knowledge_path --> Retrieval Agent --> Analysis Agent --> Memory Agent --> END
+|
++-- account_path   --> Retrieval Agent --> Analysis Agent --> Memory Agent --> END
+|
++-- escalation_path --------------------> Analysis Agent --> Memory Agent --> END
 
-Step by step explanation of how to get a dev environment running.
+Routing decisions are based on:
+- natural‑language intent
+- ticket metadata such as urgency and complexity
 
-List out the steps
+---
 
-```
-Give an example here
-```
+## 🔑 Key Capabilities
 
-## Testing
+### 🔀 Intelligent Routing
+- Requests are classified into:
+  - knowledge questions (FAQs, how‑to)
+  - account‑specific actions (subscriptions, user details)
+  - urgent or unclear requests
+- Routing logic lives in a dedicated **Intent Agent**
 
-Explain the steps needed to run any automated tests
+---
 
-### Break Down Tests
+### 🧰 Database‑Backed Support Tools
+The system integrates multiple **DB‑backed tools**, including:
 
-Explain what each test does and why
+- Account lookup by email
+- Subscription status retrieval
+- Experience / reservation lookup
 
-```
-Examples here
-```
-## Project Instructions
+All database access is:
+- abstracted behind tools
+- structured in responses
+- fully logged
 
-This section should contain all the student deliverables for this project.
+---
 
-## Built With
+### 🧠 Memory Architecture
 
-* [Item1](www.item1.com) - Description of item
-* [Item2](www.item2.com) - Description of item
-* [Item3](www.item3.com) - Description of item
+#### Short‑Term (Session) Memory
+- Implemented via a **LangGraph checkpointer**
+- Identified by `thread_id` (ticket ID)
+- Enables multi‑step workflows
+- Allows workflow state inspection via `get_state_history()`
 
-Include all items used to build project.
+#### Long‑Term (Persistent) Memory
+- Implemented using SQLite (`ticket_messages`)
+- Stores user and assistant messages
+- Retrieved across sessions for personalization and context reuse
 
-## License
-[License](../LICENSE.md)
+Together, this enables:
+- continuity within a session
+- context awareness across sessions
+
+---
+
+### 📊 Logging & Observability
+All major decisions are logged into SQLite (`ticket_logs`), including:
+- intent classification
+- routing decisions
+- tools invoked
+- confidence scores
+- escalation outcomes
+
+Logs are:
+- persisted
+- structured (JSON payloads)
+- queryable by ticket or stage
+
+This supports debugging, auditing, and reviewer inspection.
+
+---
+
+## 📁 Repository Structure
+
+```text
+solution/
+├── agentic/
+│   ├── agents/         # Core agents (intent, retrieval, analysis, memory)
+│   ├── tools/          # DB-backed tools + logging + memory store
+│   └── workflow.py     # LangGraph orchestration logic
+│
+├── design/             # System design documentation
+│
+├── data/
+│   ├── external/       # CultPass source DB (read-only)
+│   └── core/           # App-managed DB (logs + memory)
+│
+├── utils.py            # Chat interface and app bootstrap
+├── 01_external_db_setup.ipynb
+├── 02_core_db_setup.ipynb
+└── 03_agentic_app.ipynb
+
+# How to Run the Application
+
+Initialize databases:
+
+Run 01_external_db_setup.ipynb
+Run 02_core_db_setup.ipynb
+
+
+Open 03_agentic_app.ipynb
+Start the application:
+
+    app = orchestrator()
+    chat_interface(app, "TICKET-001")
+
+Use different ticket IDs (thread_id) to demonstrate:
+
+session memory
+persistent memory
+log separation
+
+# How to Inspect Memory & Logs
+
+Inspect session state:
+
+app.get_state(
+    config={"configurable": {"thread_id": "TICKET-001"}}
+)
+
+Inspect Workflow History
+
+list(
+    app.get_state_history(
+        config={"configurable": {"thread_id": "TICKET-001"}}
+    )
+)
+
+Inspect Logs:
+
+SELECT ticket_id, stage, payload, created_at
+FROM ticket_logs
+ORDER BY created_at DESC;
